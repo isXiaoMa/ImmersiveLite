@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="popup.css" />
+  <link rel="stylesheet" href="../utils/dropdown.css" />
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <span class="logo">译</span>
+      <span class="title">沉浸式翻译助手</span>
+    </div>
+    <button id="openSidePanel" class="icon-btn" title="打开侧边栏">▤</button>
+    <button id="openOptions" class="icon-btn" title="更多设置">⚙</button>
+  </div>
+
+  <button id="toggleBtn" class="primary-btn">翻译网页</button>
+  <div id="statusBar" class="status-bar"></div>
+
+  <div class="section-title">语言</div>
+  <div class="lang-row">
+    <select id="fromLang" title="源语言"></select>
+    <button id="swapLangs" class="swap-btn" title="交换语言">⇄</button>
+    <select id="toLang" title="目标语言"></select>
+  </div>
+
+  <div class="section-title">服务</div>
+  <div class="field">
+    <select id="service"></select>
+  </div>
+  <div id="serviceHint" class="hint"></div>
+  <div class="field">
+    <span class="field-label">显示模式</span>
+    <select id="displayMode">
+      <option value="dual">双语对照</option>
+      <option value="single">仅译文</option>
+    </select>
+  </div>
+
+  <div class="section-title">功能</div>
+  <div class="switch-row">
+    <label class="switch-item">
+      <input id="showFloatBall" type="checkbox" checked />
+      <span class="switch-track"><span class="switch-thumb"></span></span>
+      <span class="switch-label">悬浮球</span>
+    </label>
+    <label class="switch-item">
+      <input id="selectionTranslate" type="checkbox" checked />
+      <span class="switch-track"><span class="switch-thumb"></span></span>
+      <span class="switch-label">划词翻译</span>
+    </label>
+  </div>
+
+  <div class="tip">快捷键：<kbd>Alt</kbd> + <kbd>Q</kbd> 翻译 / 还原</div>
+
+  <script src="../utils/compat.js"></script>
+  <script src="../utils/languages.js"></script>
+  <script src="../utils/dropdown.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

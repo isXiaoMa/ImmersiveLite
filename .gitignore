@@ -1,0 +1,6 @@
+# 逆向参考资产（原版插件解包代码，仅本地使用，不入库）
+reference/
+
+# 系统文件
+Thumbs.db
+.DS_Store

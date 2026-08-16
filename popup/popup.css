@@ -1,0 +1,331 @@
+/** Popup 弹窗样式（紫色主题，参考沉浸式翻译风格） */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 300px;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+}
+
+/* ---------- 头部 ---------- */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #6a5cff, #9b8cff);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.icon-btn {
+  border: none;
+  background: none;
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.icon-btn:hover {
+  background: #f0eefe;
+  color: #6a5cff;
+}
+
+/* ---------- 主按钮与状态 ---------- */
+.primary-btn {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 2px 14px 8px;
+  padding: 10px 0;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6a5cff, #8a7bff);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.primary-btn:hover {
+  opacity: 0.9;
+}
+
+.primary-btn:active {
+  transform: scale(0.98);
+}
+
+.primary-btn.restore {
+  background: linear-gradient(135deg, #5e6772, #7d8894);
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status-bar {
+  min-height: 18px;
+  margin: 0 14px 6px;
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* 状态栏迷你转圈（翻译进行中） */
+.status-bar .mini-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(106, 92, 255, 0.25);
+  border-top-color: #6a5cff;
+  border-radius: 50%;
+  animation: mini-spin 0.6s infinite linear;
+  flex-shrink: 0;
+}
+
+@keyframes mini-spin {
+  to { transform: rotate(360deg); }
+}
+
+.status-bar.error {
+  color: #d93025;
+}
+
+/* ---------- 分组标题 ---------- */
+.section-title {
+  margin: 10px 14px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9a94b8;
+  letter-spacing: 1px;
+}
+
+/* ---------- 语言行：源语言 ⇄ 目标语言 ---------- */
+.lang-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+}
+
+.lang-row select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 20px 7px 6px;
+  border: 1px solid #e3e1ee;
+  border-radius: 8px;
+  background: #fafafd;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%239a94b8' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+}
+
+.lang-row select:focus {
+  border-color: #6a5cff;
+  box-shadow: 0 0 0 3px rgba(106, 92, 255, 0.13);
+}
+
+.swap-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: #f0eefe;
+  color: #6a5cff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.swap-btn:hover {
+  background: #e2ddfd;
+}
+
+.swap-btn:active {
+  transform: rotate(180deg);
+}
+
+/* ---------- 下拉字段 ---------- */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  margin-bottom: 6px;
+}
+
+.field-label {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: #666;
+}
+
+.field select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 26px 7px 8px;
+  border: 1px solid #e3e1ee;
+  border-radius: 8px;
+  background: #fafafd;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%239a94b8' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  transition: border-color 0.15s ease;
+}
+
+.field select:focus {
+  border-color: #6a5cff;
+  box-shadow: 0 0 0 3px rgba(106, 92, 255, 0.13);
+}
+
+.hint {
+  margin: 2px 14px 6px;
+  font-size: 12px;
+  color: #c07b00;
+  min-height: 14px;
+}
+
+/* ---------- 功能开关（iOS 风格 toggle） ---------- */
+.switch-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px;
+}
+
+.switch-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #eee;
+  border-radius: 9px;
+  background: #fafafd;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s ease;
+}
+
+.switch-item:hover {
+  border-color: #ddd9f5;
+}
+
+.switch-item input {
+  display: none;
+}
+
+.switch-track {
+  flex-shrink: 0;
+  width: 32px;
+  height: 19px;
+  border-radius: 10px;
+  background: #d5d5de;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: left 0.2s ease;
+}
+
+.switch-item input:checked + .switch-track {
+  background: #6a5cff;
+}
+
+.switch-item input:checked + .switch-track .switch-thumb {
+  left: 15px;
+}
+
+/* ---------- 底部提示 ---------- */
+.tip {
+  margin-top: 10px;
+  padding: 9px 14px;
+  border-top: 1px solid #f0f0f0;
+  font-size: 12px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tip kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 2px 5px;
+  border: 1px solid #ddd;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: #fafafd;
+  font-family: inherit;
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* ---------- 自定义下拉：popup 内尺寸对齐本页输入框（13px） ---------- */
+.dd-btn {
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.dd-item {
+  padding: 7px 28px 7px 10px;
+  font-size: 13px;
+}

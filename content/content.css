@@ -1,0 +1,233 @@
+/**
+ * 沉浸式译文样式（结构与规则对齐原版沉浸式翻译 v1.32 inject.css）
+ * 设计哲学：零侵入——wrapper/inner 不重置任何样式，全部自然继承原文；
+ * 换行场景由 <br> + block-wrapper 的 margin 提供间距
+ */
+
+/* ---------- 译文包装层：仅重置字体特性（原版唯一规则） ---------- */
+.immersive-translate-target-wrapper {
+  font-feature-settings: normal;
+}
+
+/* 译文方向为 RTL 时块级右对齐（原版行为） */
+[imt-state='dual'] .immersive-translate-target-wrapper[dir='rtl'] {
+  text-align: right;
+}
+
+/* ---------- 换行场景（block-wrapper）：原版核心布局规则 ----------
+   inline-block（非 block）+ 上下 8px 间距，配合 wrapper 中的 <br> 实现换行 */
+[imt-state='dual'] .immersive-translate-target-translation-block-wrapper {
+  margin: 8px 0 !important;
+  display: inline-block;
+}
+
+/* 保留译文中的空白与换行（原版 pre-whitespace） */
+.immersive-translate-target-translation-pre-whitespace {
+  white-space: pre-wrap !important;
+}
+
+/* ---------- 仅译文模式（imt-state="translation"）：隐藏换行符、间距归零（原版规则） ---------- */
+[imt-state='translation'] .immersive-translate-target-wrapper > br {
+  display: none;
+}
+
+[imt-state='translation'] .immersive-translate-target-translation-block-wrapper {
+  margin: 0 !important;
+}
+
+/* ---------- 译文最内层：纯继承原文样式，自定义时由变量覆盖 ---------- */
+.immersive-translate-target-inner {
+  color: var(--it-color, inherit);
+  font-size: var(--it-font-size, inherit);
+  font-weight: var(--it-weight, inherit);
+}
+
+/* ---------- 加载态：转圈 Spinner（原版同名类） ---------- */
+.immersive-translate-target-translation-loading {
+  display: inline-block;
+}
+
+.immersive-translate-loading-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(128, 128, 128, 0.25);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: immersive-translate-loading-animation 0.6s infinite linear !important;
+  vertical-align: middle;
+}
+
+@keyframes immersive-translate-loading-animation {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- 错误态 ---------- */
+.immersive-translate-target-translation-error {
+  color: #d93025;
+  font-size: 13px;
+}
+
+/* ---------- 错误态内的"重试"链接 ---------- */
+.it-retry-link {
+  color: #1a73e8 !important;
+  font-size: 13px;
+  margin-left: 6px;
+  cursor: pointer;
+  text-decoration: underline !important;
+}
+
+.it-retry-link:hover {
+  color: #1557b0 !important;
+}
+
+/* ---------- 悬浮球 ---------- */
+.it-float-ball {
+  position: fixed;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6a5cff, #9f7cff);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(106, 92, 255, 0.4);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 2147483646;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  opacity: 0.75;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  line-height: 1;
+  padding: 0;
+  border: none;
+  letter-spacing: normal;
+}
+
+.it-float-ball:hover {
+  opacity: 1;
+  transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(106, 92, 255, 0.5);
+}
+
+/* 已翻译状态：高亮描边 */
+.it-float-ball.it-active {
+  opacity: 1;
+  background: linear-gradient(135deg, #0f9d58, #34a853);
+  box-shadow: 0 4px 14px rgba(15, 157, 88, 0.4);
+}
+
+/* 翻译进行中：呼吸动画 */
+.it-float-ball.it-loading {
+  opacity: 1;
+  animation: it-ball-pulse 1s ease-in-out infinite;
+}
+
+@keyframes it-ball-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+/* ---------- 划词翻译卡片 ---------- */
+.it-selection-popup {
+  position: fixed;
+  width: 320px;
+  max-width: calc(100vw - 16px);
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  padding: 12px 14px;
+  z-index: 2147483646;
+  font-size: 14px;
+  color: #202124;
+  line-height: 1.6;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  box-sizing: border-box;
+  animation: it-pop-in 0.16s ease-out;
+}
+
+/* 卡片入场：轻微上浮淡入 */
+@keyframes it-pop-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+
+.it-selection-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #5f6368;
+  min-height: 20px;
+}
+
+/* 卡片内 Spinner（深色适配） */
+.it-selection-popup .immersive-translate-loading-spinner {
+  border-color: rgba(106, 92, 255, 0.25);
+  border-top-color: #6a5cff;
+}
+
+.it-selection-result {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow-y: auto;
+  /* 右侧避让关闭按钮，底部避让复制按钮 */
+  padding-right: 24px;
+  padding-bottom: 30px;
+}
+
+.it-selection-error {
+  color: #d93025;
+  font-size: 13px;
+  padding-right: 24px;
+  padding-bottom: 30px;
+}
+
+/* 右上角关闭按钮 */
+.it-selection-close {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #9aa0a6;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.it-selection-close:hover {
+  background: #f1f3f4;
+  color: #3c4043;
+}
+
+/* 复制按钮：右下角（与右上角关闭按钮错开） */
+.it-selection-copy {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #f8f9fa;
+  color: #3c4043;
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.it-selection-copy:hover {
+  background: #eef0f2;
+}

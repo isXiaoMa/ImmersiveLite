@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>沉浸式翻译助手 - 设置</title>
+    <link rel="stylesheet" href="options.css" />
+    <link rel="stylesheet" href="../utils/dropdown.css" />
+  </head>
+  <body>
+    <div class="page">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="logo">译</span>
+          <span>沉浸式翻译助手</span>
+        </div>
+        <nav>
+          <a href="#basic" class="active">基本设置</a>
+          <a href="#interaction">交互设置</a>
+          <a href="#free">免费智能</a>
+          <a href="#google">谷歌翻译</a>
+          <a href="#baidu">百度翻译</a>
+          <a href="#openai">大模型翻译</a>
+          <a href="#style">译文样式</a>
+        </nav>
+        <div class="version">v1.0.0</div>
+      </aside>
+
+      <main class="content">
+        <!-- 基本设置 -->
+        <section id="basic" class="card">
+          <h2>基本设置</h2>
+          <div class="row">
+            <label>源语言</label>
+            <select id="fromLang"></select>
+          </div>
+          <div class="row">
+            <label>目标语言</label>
+            <select id="toLang"></select>
+          </div>
+          <div class="row">
+            <label>默认翻译服务</label>
+            <select id="service"></select>
+          </div>
+          <p class="desc">
+            源语言建议保持"自动检测"。切换服务后，已翻译页面会自动重新翻译。
+          </p>
+        </section>
+
+        <!-- 交互设置 -->
+        <section id="interaction" class="card">
+          <h2>交互设置</h2>
+          <div class="row">
+            <label>显示模式</label>
+            <select id="displayMode">
+              <option value="dual">双语对照（原文 + 译文）</option>
+              <option value="single">仅译文（隐藏原文）</option>
+            </select>
+          </div>
+          <div class="switch-group">
+            <label class="switch-item" for="showFloatBall">
+              <span>页面悬浮球</span>
+              <input id="showFloatBall" type="checkbox" checked />
+              <span class="switch-track"
+                ><span class="switch-thumb"></span
+              ></span>
+            </label>
+            <label class="switch-item" for="selectionTranslate">
+              <span>划词翻译</span>
+              <input id="selectionTranslate" type="checkbox" checked />
+              <span class="switch-track"
+                ><span class="switch-thumb"></span
+              ></span>
+            </label>
+          </div>
+          <p class="desc">
+            悬浮球：页面右侧的"译"字圆球，点击翻译/还原，可上下拖动。
+            划词翻译：选中一段文字后自动弹出译文卡片。
+          </p>
+        </section>
+
+        <!-- 免费智能翻译 -->
+        <section id="free" class="card">
+          <h2>免费智能翻译（推荐）</h2>
+          <p class="desc">
+            自动降级链：优先微软翻译（批量快），失败自动切换谷歌翻译，全部失败才提示错误。
+            无需任何配置，开箱即用。
+          </p>
+        </section>
+
+        <!-- 谷歌翻译 -->
+        <section id="google" class="card">
+          <h2>谷歌翻译（免费）</h2>
+          <p class="desc">
+            使用谷歌公共接口，无需任何配置，开箱即用。适合日常网页阅读。
+          </p>
+        </section>
+
+        <!-- 百度翻译 -->
+        <section id="baidu" class="card">
+          <h2>百度翻译</h2>
+          <div class="row">
+            <label>App ID</label>
+            <input
+              id="baiduAppid"
+              type="text"
+              placeholder="在百度翻译开放平台获取"
+            />
+          </div>
+          <div class="row">
+            <label>密钥</label>
+            <input
+              id="baiduKey"
+              type="password"
+              placeholder="与 App ID 配对的密钥"
+            />
+          </div>
+          <p class="desc">
+            前往
+            <a href="https://fanyi-api.baidu.com/" target="_blank"
+              >百度翻译开放平台</a
+            >
+            注册成为开发者并开通"通用文本翻译"即可免费获得（标准版每月有免费额度）。
+          </p>
+        </section>
+
+        <!-- 大模型翻译（多配置管理） -->
+        <section id="openai" class="card">
+          <h2>大模型翻译（OpenAI 兼容接口）</h2>
+          <p class="desc">
+            每个配置会作为独立选项出现在服务下拉中（如 GPT-5.2、DeepSeek）。 API
+            地址填写到 /v1 即可，例如 DeepSeek：https://api.deepseek.com/v1
+          </p>
+          <p class="desc">
+            Coze（扣子）使用原生协议：API 地址填 https://api.coze.cn（海外填
+            com）， API Key 填个人访问令牌 PAT，"模型名"栏填发布到 API 的 Bot
+            ID； 并建议在 Coze 平台为 Bot 设置"严格按指令输出 JSON 数组"的人设。
+          </p>
+          <p class="desc">
+            豆包（火山方舟）推荐直连，无需经过
+            Coze：到火山引擎控制台开通"火山方舟"并
+            <a
+              href="https://console.volcengine.com/ark/region:ark+cn-beijing/apikey"
+              target="_blank"
+              >获取 API Key</a
+            >， 模型名填 Model ID（如 doubao-seed-2-1-pro-260628）或推理接入点
+            ID（ep- 开头）； 订阅了 Agent Plan 套餐的用户把地址改为
+            https://ark.cn-beijing.volces.com/api/plan/v3。
+          </p>
+          <div id="llmList"></div>
+          <div class="row">
+            <button id="addLlmBtn" class="btn">+ 添加大模型</button>
+          </div>
+          <div class="row column">
+            <label>翻译提示词</label>
+            <textarea
+              id="openaiPrompt"
+              rows="4"
+              placeholder="可选，所有大模型共用。留空使用默认提示词，可用 {from} 与 {to} 占位语言"
+            ></textarea>
+          </div>
+        </section>
+
+        <!-- 译文样式 -->
+        <section id="style" class="card">
+          <h2>译文样式</h2>
+          <div class="row">
+            <label>译文颜色</label>
+            <input id="styleColor" type="color" />
+            <label class="inline-label">
+              <input id="styleFollowColor" type="checkbox" checked />
+              跟随原文颜色
+            </label>
+          </div>
+          <label class="switch-item" for="styleBold">
+            <span>译文加粗</span>
+            <input id="styleBold" type="checkbox" />
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+          </label>
+          <div class="row">
+            <label>译文字号</label>
+            <select id="styleFontSize">
+              <option value="inherit">跟随原文</option>
+              <option value="0.9em">较小</option>
+              <option value="1em">相同</option>
+              <option value="1.1em">较大</option>
+            </select>
+          </div>
+        </section>
+
+        <div class="save-bar">
+          <span id="saveTip" class="save-tip"></span>
+          <button id="saveBtn" class="btn primary">保存设置</button>
+        </div>
+      </main>
+    </div>
+
+    <script src="../utils/compat.js"></script>
+    <script src="../utils/languages.js"></script>
+    <script src="../utils/dropdown.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

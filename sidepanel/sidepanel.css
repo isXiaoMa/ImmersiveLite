@@ -1,0 +1,281 @@
+/** 侧边栏面板样式（与 popup 一致的紫色主题，宽度自适应侧栏） */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 280px;
+  max-width: 480px;
+  margin: 0 auto;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+  padding: 8px 10px 16px;
+}
+
+/* ---------- 头部 ---------- */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #6a5cff, #9b8cff);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.icon-btn {
+  border: none;
+  background: none;
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.icon-btn:hover {
+  background: #f0eefe;
+  color: #6a5cff;
+}
+
+/* ---------- 区块卡片 ---------- */
+.card {
+  background: #faf9ff;
+  border: 1px solid #eee9ff;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a86a8;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+/* ---------- 主按钮 ---------- */
+.primary-btn {
+  width: 100%;
+  padding: 9px 0;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #6a5cff, #9b8cff);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.15s;
+}
+
+.primary-btn:hover {
+  opacity: 0.92;
+}
+
+.primary-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.primary-btn.restore {
+  background: #f0eefe;
+  color: #6a5cff;
+}
+
+/* ---------- 状态条 ---------- */
+.status-bar {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8a86a8;
+  min-height: 16px;
+}
+
+.status-bar.error {
+  color: #e5484d;
+}
+
+.mini-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border: 2px solid #d8d2ff;
+  border-top-color: #6a5cff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- 文本翻译区 ---------- */
+textarea {
+  width: 100%;
+  min-height: 110px;
+  max-height: 260px;
+  resize: vertical;
+  padding: 10px;
+  border: 1px solid #e4e0f5;
+  border-radius: 9px;
+  font: inherit;
+  line-height: 1.55;
+  color: #333;
+  background: #fff;
+  outline: none;
+}
+
+textarea:focus {
+  border-color: #9b8cff;
+  box-shadow: 0 0 0 3px rgba(106, 92, 255, 0.12);
+}
+
+.lang-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.lang-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.swap-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e4e0f5;
+  border-radius: 8px;
+  background: #fff;
+  color: #6a5cff;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.swap-btn:hover {
+  background: #f0eefe;
+}
+
+.field {
+  margin-bottom: 10px;
+}
+
+.field select {
+  width: 100%;
+}
+
+/* ---------- 翻译中按钮转圈 ---------- */
+.btn-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.primary-btn.restore .btn-spinner {
+  border-color: #d8d2ff;
+  border-top-color: #6a5cff;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---------- 结果区 ---------- */
+.result-wrap {
+  margin-top: 12px;
+  border: 1px solid #e4e0f5;
+  border-radius: 9px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #f7f5ff;
+  border-bottom: 1px solid #eee9ff;
+}
+
+.result-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a86a8;
+}
+
+.result-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.text-btn {
+  border: none;
+  background: none;
+  font-size: 12px;
+  color: #6a5cff;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.text-btn:hover {
+  background: #f0eefe;
+}
+
+.result-text {
+  padding: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* ---------- 底部提示 ---------- */
+.tip {
+  font-size: 12px;
+  color: #a5a1bd;
+  text-align: center;
+  padding: 0 8px;
+}

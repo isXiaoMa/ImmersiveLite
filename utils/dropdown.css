@@ -1,0 +1,158 @@
+/**
+ * 自定义下拉组件样式（popup / options 共用）
+ * 结构：.dd > .dd-btn（触发按钮）+ .dd-menu（浮层选项列表）+ 原生 select（隐藏）
+ */
+
+.dd {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 原生 select 隐藏保留（值仍可被 JS 读写） */
+.dd select {
+  display: none !important;
+}
+
+/* 触发按钮：外观对齐原输入框样式 */
+.dd-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: #333;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.dd-btn:hover {
+  border-color: #bbb8d8;
+  background: #fff;
+}
+
+.dd-btn:focus-visible,
+.dd.open .dd-btn {
+  border-color: #6a5cff;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(106, 92, 255, 0.13);
+  outline: none;
+}
+
+.dd-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 下拉箭头：展开时旋转 */
+.dd-arrow {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dd-arrow svg {
+  display: block;
+  transition: transform 0.18s ease;
+}
+
+.dd.open .dd-arrow svg {
+  transform: rotate(180deg);
+}
+
+/* 浮层菜单：淡入 + 上移动画，底部空间不足时向上弹出 */
+.dd-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 60;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #ececf3;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(30, 30, 60, 0.16);
+  max-height: 240px;
+  overflow-y: auto;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform-origin: top center;
+}
+
+.dd.open .dd-menu {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.dd.up .dd-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+  transform: translateY(4px);
+  transform-origin: bottom center;
+}
+
+.dd.up.open .dd-menu {
+  transform: none;
+}
+
+/* 选项：悬停淡紫底，选中紫色加粗带勾。
+   右侧统一预留勾选图标空间，长文本截断点一致且不与图标重叠 */
+.dd-item {
+  position: relative;
+  padding: 8px 28px 8px 10px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: #444;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dd-item:hover {
+  background: #f0eefe;
+  color: #4c3fd8;
+}
+
+.dd-item.selected {
+  color: #6a5cff;
+  font-weight: 600;
+  background: #f4f2fd;
+}
+
+.dd-item.selected::after {
+  content: "✓";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* 细滚动条 */
+.dd-menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dd-menu::-webkit-scrollbar-thumb {
+  background: #ddd9f0;
+  border-radius: 4px;
+}
+
+.dd-menu::-webkit-scrollbar-track {
+  background: transparent;
+}

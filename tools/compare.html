@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>沉浸式翻译 · DOM 输出对比分析</title>
+    <style>
+      /** 工具页样式：与插件设置页同款紫色主题 */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-size: 14px;
+        color: #333;
+        background: #f5f6fa;
+        padding: 24px;
+      }
+      .panel {
+        max-width: 1100px;
+        margin: 0 auto 16px;
+        background: #fff;
+        border: 1px solid #ececf3;
+        border-radius: 12px;
+        padding: 18px 20px;
+      }
+      h1 { font-size: 18px; margin-bottom: 4px; }
+      .sub { color: #999; font-size: 12.5px; margin-bottom: 14px; }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      .picker {
+        flex: 1;
+        min-width: 280px;
+        border: 1px dashed #cfcfe6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: #fafaff;
+        font-size: 13px;
+      }
+      .picker label { font-weight: 600; color: #6a5cff; display: block; margin-bottom: 6px; }
+      button {
+        background: linear-gradient(135deg, #6a5cff, #9b8cff);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 22px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+      .stat {
+        background: #f6f5ff;
+        border-radius: 8px;
+        padding: 10px 16px;
+        min-width: 130px;
+      }
+      .stat b { display: block; font-size: 22px; color: #6a5cff; }
+      .stat span { color: #888; font-size: 12px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #f0f0f5; vertical-align: top; }
+      th { color: #888; font-weight: 600; background: #fafaff; }
+      td.src { max-width: 320px; word-break: break-all; color: #444; }
+      .tag { display: inline-block; background: #f0eefe; color: #6a5cff; border-radius: 4px; padding: 1px 7px; font-size: 12px; margin: 1px 2px; white-space: nowrap; }
+      .tag.warn { background: #fdeeee; color: #c0392b; }
+      .tag.ok { background: #eef7ee; color: #1e8e3e; }
+      .missing { color: #c0392b; font-weight: 600; }
+      .extra { color: #b8860b; font-weight: 600; }
+      .empty { color: #bbb; padding: 24px; text-align: center; }
+      h2 { font-size: 14.5px; margin: 4px 0 10px; color: #444; }
+      code { background: #f6f6fa; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h1>沉浸式翻译 · DOM 输出对比分析</h1>
+      <div class="sub">
+        对比原版（demo1）与我们的插件（demo2）翻译同一页面后的 DOM 输出：
+        以原文文本配对翻译单元，自动列出漏翻 / 多翻 / 分隔符与结构差异，并透视原版分隔符规律。
+        纯本地运行，不上传任何内容。
+      </div>
+      <div class="row">
+        <div class="picker">
+          <label>① 原版导出（demo1.html）</label>
+          <input type="file" id="fileA" accept=".html,.htm" />
+        </div>
+        <div class="picker">
+          <label>② 我们的插件导出（demo2.html）</label>
+          <input type="file" id="fileB" accept=".html,.htm" />
+        </div>
+        <button id="run" disabled>开始对比</button>
+      </div>
+    </div>
+
+    <div class="panel" id="reportPanel" style="display: none">
+      <div class="summary" id="summary"></div>
+      <h2>差异明细</h2>
+      <div id="diffTable"></div>
+    </div>
+
+    <div class="panel" id="patternPanel" style="display: none">
+      <h2>原版分隔符规律透视（demo1 全部单元，按场景计数）</h2>
+      <div class="sub">
+        每行是一个「宿主标签 × 尾部兄弟类型 → 分隔符」的组合。
+        高频组合即原版的隐式规则，可直接对照 content.js 的判定逻辑核查。
+      </div>
+      <div id="patternTable"></div>
+    </div>
+
+    <script>
+      /** 两个待比较文件的原始文本 */
+      const files = { A: null, B: null };
+
+      /**
+       * 读取用户选择的文件为纯文本
+       * @param {File} file 文件对象
+       * @returns {Promise<string>} 文件文本
+       */
+      function readText(file) {
+        return new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = reject;
+          r.readAsText(file, "utf-8");
+        });
+      }
+
+      document.getElementById("fileA").addEventListener("change", async (e) => {
+        files.A = e.target.files[0] ? await readText(e.target.files[0]) : null;
+        updateRun();
+      });
+      document.getElementById("fileB").addEventListener("change", async (e) => {
+        files.B = e.target.files[0] ? await readText(e.target.files[0]) : null;
+        updateRun();
+      });
+
+      /** 两个文件都就绪后才允许对比 */
+      function updateRun() {
+        document.getElementById("run").disabled = !(files.A && files.B);
+      }
+
+      /**
+       * 判定 wrapper 的分隔符类型（与插件构建逻辑一一对应）
+       * @param {Element} wrapper 译文包装根元素
+       * @returns {string} 'br' | 'nbsp' | 'none'
+       */
+      function separatorOf(wrapper) {
+        const first = wrapper.firstElementChild;
+        if (!first) return "none";
+        if (first.tagName === "BR") return "br";
+        if (first.tagName === "FONT" && first.textContent.includes("\u00A0"))
+          return "nbsp";
+        return "none";
+      }
+
+      /**
+       * 取 wrapper 前面最近的有效兄弟元素（跳过纯装饰/无文本节点）
+       * @param {Element} wrapper 译文包装根元素
+       * @returns {string} 兄弟标签名（小写），无则 'text'（文本节点）或 '∅'
+       */
+      function prevSiblingOf(wrapper) {
+        let node = wrapper.previousSibling;
+        while (node) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            if (node.textContent.trim()) return "text";
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.tagName === "SVG" || node.tagName === "IMG") {
+              node = node.previousSibling;
+              continue;
+            }
+            if (node.textContent.trim()) return node.tagName.toLowerCase();
+          }
+          node = node.previousSibling;
+        }
+        return "∅";
+      }
+
+      /**
+       * 提取宿主元素的原文（克隆后剔除所有译文 wrapper 再取文本）
+       * @param {Element} wrapper 译文包装根元素
+       * @returns {string} 归一化原文（空白压缩）
+       */
+      function sourceTextOf(wrapper) {
+        const host = wrapper.parentElement;
+        if (!host) return "";
+        const clone = host.cloneNode(true);
+        clone
+          .querySelectorAll(".immersive-translate-target-wrapper")
+          .forEach((w) => w.remove());
+        return clone.textContent.replace(/\s+/g, " ").trim();
+      }
+
+      /**
+       * 从 HTML 文本中提取全部翻译单元的结构化特征
+       * @param {string} html 文件文本
+       * @returns {Object[]} 单元数组：{ src, sep, host, prev }
+       */
+      function extractUnits(html) {
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const units = [];
+        doc.querySelectorAll(".immersive-translate-target-wrapper").forEach((w) => {
+          const host = w.parentElement;
+          if (!host) return;
+          units.push({
+            src: sourceTextOf(w),
+            sep: separatorOf(w),
+            host: host.tagName.toLowerCase(),
+            prev: prevSiblingOf(w),
+          });
+        });
+        return units;
+      }
+
+      /**
+       * 按原文文本建索引（同文本多处出现时按次序入队配对）
+       * @param {Object[]} units 单元数组
+       * @returns {Map<string, Object[]>} 原文 → 单元队列
+       */
+      function indexBySrc(units) {
+        const map = new Map();
+        for (const u of units) {
+          if (!map.has(u.src)) map.set(u.src, []);
+          map.get(u.src).push(u);
+        }
+        return map;
+      }
+
+      /** 主流程：解析、配对、生成差异清单与规律透视 */
+      document.getElementById("run").addEventListener("click", () => {
+        const a = extractUnits(files.A);
+        const b = extractUnits(files.B);
+        const idxA = indexBySrc(a);
+        const idxB = indexBySrc(b);
+
+        const rows = []; // 差异行
+        let matched = 0;
+
+        // ① 原版翻了、我们没翻（或我们移除了占位）
+        for (const [src, queue] of idxA) {
+          for (const ua of queue) {
+            const qb = idxB.get(src);
+            const ub = qb && qb.length ? qb.shift() : null;
+            if (!ub) {
+              rows.push({
+                type: "miss",
+                src,
+                a: ua,
+                b: null,
+              });
+              continue;
+            }
+            matched++;
+            // ②③ 都翻：比较分隔符与结构
+            if (
+              ua.sep !== ub.sep ||
+              ua.host !== ub.host ||
+              ua.prev !== ub.prev
+            ) {
+              rows.push({ type: "diff", src, a: ua, b: ub });
+            }
+          }
+        }
+        // ④ 我们翻了、原版没翻
+        for (const [src, queue] of idxB) {
+          for (const ub of queue) {
+            rows.push({ type: "extra", src, a: null, b: ub });
+          }
+        }
+
+        renderSummary(a.length, b.length, matched, rows);
+        renderDiff(rows);
+        renderPatterns(a);
+        document.getElementById("reportPanel").style.display = "";
+        document.getElementById("patternPanel").style.display = "";
+      });
+
+      /**
+       * 渲染顶部汇总卡片
+       * @param {number} na demo1 单元数
+       * @param {number} nb demo2 单元数
+       * @param {number} matched 配对成功数
+       * @param {Object[]} rows 差异行
+       */
+      function renderSummary(na, nb, matched, rows) {
+        const miss = rows.filter((r) => r.type === "miss").length;
+        const extra = rows.filter((r) => r.type === "extra").length;
+        const diff = rows.filter((r) => r.type === "diff").length;
+        document.getElementById("summary").innerHTML = [
+          ["原版单元", na],
+          ["我方单元", nb],
+          ["配对一致", matched - diff],
+          ["结构/分隔符差异", diff, "warn"],
+          ["原版翻了我没翻", miss, "warn"],
+          ["我翻了原版没翻", extra, "warn"],
+        ]
+          .map(
+            ([label, v, tone]) =>
+              `<div class="stat"><b class="${tone ? "missing" : ""}">${v}</b><span>${label}</span></div>`,
+          )
+          .join("");
+      }
+
+      /**
+       * HTML 转义（防注入）
+       * @param {string} s 原始文本
+       * @returns {string} 转义文本
+       */
+      function esc(s) {
+        return String(s).replace(/[&<>"]/g, (c) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]),
+        );
+      }
+
+      /**
+       * 渲染差异明细表
+       * @param {Object[]} rows 差异行
+       */
+      function renderDiff(rows) {
+        const box = document.getElementById("diffTable");
+        if (!rows.length) {
+          box.innerHTML = '<div class="empty">完全没有差异，结构与原版完全一致 🎉</div>';
+          return;
+        }
+        const brief = (s) =>
+          s.length > 46 ? esc(s.slice(0, 46)) + "…" : esc(s);
+        const side = (u) =>
+          u
+            ? `<span class="tag">${u.host}</span><span class="tag">prev:${u.prev}</span><span class="tag ${u.sep === "br" ? "warn" : "ok"}">${u.sep}</span>`
+            : '<span class="missing">未翻译</span>';
+        const typeLabel = {
+          miss: '<span class="tag warn">漏翻</span>',
+          extra: '<span class="tag warn">多翻</span>',
+          diff: '<span class="tag">结构差异</span>',
+        };
+        box.innerHTML =
+          "<table><tr><th>类型</th><th>原文</th><th>原版结构</th><th>我方结构</th></tr>" +
+          rows
+            .map(
+              (r) =>
+                `<tr><td>${typeLabel[r.type]}</td><td class="src">${brief(r.src)}</td><td>${side(r.a)}</td><td>${side(r.b)}</td></tr>`,
+            )
+            .join("") +
+          "</table>";
+      }
+
+      /**
+       * 渲染原版分隔符规律透视表（高频组合即隐式规则）
+       * @param {Object[]} units demo1 全部单元
+       */
+      function renderPatterns(units) {
+        const counter = new Map();
+        for (const u of units) {
+          const key = `${u.host} | 尾部兄弟:${u.prev} | 分隔符:${u.sep}`;
+          counter.set(key, (counter.get(key) || 0) + 1);
+        }
+        const sorted = [...counter.entries()].sort((x, y) => y[1] - x[1]);
+        document.getElementById("patternTable").innerHTML =
+          "<table><tr><th>场景组合（宿主 | 尾部兄弟 | 分隔符）</th><th>次数</th></tr>" +
+          sorted
+            .map(([k, v]) => `<tr><td>${esc(k)}</td><td><b>${v}</b></td></tr>`)
+            .join("") +
+          "</table>";
+      }
+    </script>
+  </body>
+</html>

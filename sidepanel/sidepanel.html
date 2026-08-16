@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="sidepanel.css" />
+  <link rel="stylesheet" href="../utils/dropdown.css" />
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <span class="logo">译</span>
+      <span class="title">沉浸式翻译助手</span>
+    </div>
+    <button id="openOptions" class="icon-btn" title="更多设置">⚙</button>
+  </div>
+
+  <!-- 区块一：当前页面翻译控制 -->
+  <section class="card">
+    <div class="section-title">当前页面</div>
+    <button id="toggleBtn" class="primary-btn">翻译网页</button>
+    <div id="statusBar" class="status-bar"></div>
+  </section>
+
+  <!-- 区块二：文本翻译工具 -->
+  <section class="card">
+    <div class="section-title">文本翻译</div>
+    <textarea
+      id="inputText"
+      placeholder="输入或粘贴要翻译的文本，Ctrl + Enter 翻译"
+      rows="5"
+    ></textarea>
+    <div class="lang-row">
+      <select id="fromLang" title="源语言"></select>
+      <button id="swapLangs" class="swap-btn" title="交换语言">⇄</button>
+      <select id="toLang" title="目标语言"></select>
+    </div>
+    <div class="field">
+      <select id="service"></select>
+    </div>
+    <button id="translateBtn" class="primary-btn">
+      <span id="transBtnLabel">翻 译</span>
+      <span id="transSpinner" class="btn-spinner hidden"></span>
+    </button>
+    <div id="resultWrap" class="result-wrap hidden">
+      <div class="result-head">
+        <span class="result-title">译文</span>
+        <span class="result-actions">
+          <button id="copyResult" class="text-btn">复制</button>
+          <button id="clearAll" class="text-btn">清空</button>
+        </span>
+      </div>
+      <div id="resultText" class="result-text"></div>
+    </div>
+  </section>
+
+  <div class="tip">文本翻译的语言选择仅侧边栏内生效，不改动全局设置</div>
+
+  <script src="../utils/compat.js"></script>
+  <script src="../utils/languages.js"></script>
+  <script src="../utils/dropdown.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
