@@ -33,6 +33,10 @@ const DEFAULT_SETTINGS = {
   // 大模型服务配置列表（默认为空，用户在设置页自行添加）
   // baseUrl 填根地址即可；Coze 使用原生 /v3/chat 协议，model 字段填 Bot ID
   llmConfigs: [],
+  // 历史字段：用户主动删除的预置大模型 id（旧版"预置模板自动补齐"的防复活记录）
+  // 当前合并逻辑已移除，但保留默认定义——旧配置中的残留值经 getSettings→draft→saveDraft
+  // 链路存活，若未来恢复自动补齐逻辑，缺失默认值会使未删过模型的用户遇到 undefined
+  deletedLlm: [],
   // 全局共用的大模型翻译提示词（各 llm 配置共享）
   openai: {
     prompt:
