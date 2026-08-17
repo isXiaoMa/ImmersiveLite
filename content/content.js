@@ -60,6 +60,88 @@
   const VAR_DELIMITERS = ["@", "#"];
 
   /**
+   * 技术专有名词保护列表：送翻前替换为变量占位符，防止大模型把
+   * React/Vue/JavaScript 等术语误译（如 React→反应）。大小写敏感，
+   * 按长度降序排列以保证 "React Native" 优先于 "React" 整体命中
+   */
+  const PROPER_NOUNS = [
+    // 框架 / 库
+    "React Native",
+    "Next.js",
+    "Vue.js",
+    "React",
+    "Vue",
+    "Angular",
+    "Svelte",
+    "SolidJS",
+    "Astro",
+    "Remix",
+    "Nuxt",
+    // 语言 / 运行时 / 构建工具
+    "JavaScript",
+    "TypeScript",
+    "WebAssembly",
+    "Node.js",
+    "Deno",
+    "webpack",
+    "Vite",
+    "Rollup",
+    "esbuild",
+    "Babel",
+    "ESLint",
+    "npm",
+    "pnpm",
+    "Java",
+    "Python",
+    "Rust",
+    "Kotlin",
+    "PHP",
+    // 平台 / 产品 / 公司
+    "GitHub",
+    "GitLab",
+    "Chrome",
+    "Firefox",
+    "Safari",
+    "Edge",
+    "VS Code",
+    "Docker",
+    "Kubernetes",
+    "Android",
+    "iOS",
+    "Windows",
+    "macOS",
+    "Linux",
+    "Google",
+    "Microsoft",
+    "Apple",
+    "Meta",
+    "Amazon",
+    "OpenAI",
+    "Anthropic",
+  ].sort((a, b) => b.length - a.length);
+
+  /**
+   * 将文本中的技术专有名词替换为变量占位符（复用 @i# 变量机制）：
+   * 词边界用 (?<![\w@#]) / (?![\w@#]) 保证整词匹配，
+   * 不误伤 Reacting/Vuetify 等派生词，也不与已有占位符冲突
+   * @param {string} text 段落文本
+   * @param {Object} variables 变量表（与 stayOriginal 共用索引空间）
+   * @returns {string} 替换后的文本
+   */
+  function protectProperNouns(text, variables) {
+    for (const noun of PROPER_NOUNS) {
+      const escaped = noun.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`(?<![\\w@#])${escaped}(?![\\w@#])`, "g");
+      text = text.replace(re, (m) => {
+        const idx = Object.keys(variables).length;
+        variables[idx] = m;
+        return `${VAR_DELIMITERS[0]}${idx}${VAR_DELIMITERS[1]}`;
+      });
+    }
+    return text;
+  }
+
+  /**
    * 行内 display 列表（原版 qee 完整还原）：命中则不是段落边界。
    * 注意 display:contents 原版判定为块（不在列表内）
    */
@@ -889,7 +971,8 @@
    * 段落文本组装 + 变量占位（原版 Jc，@1373690 简化移植）：
    * stayOriginal 元素（CODE/TT/SUP/SUB/SAMP）的独占文本提升为父元素，
    * 替换为 @i# 占位符（原版 Au=["@","#"]），翻译后还原——
-   * 代码片段/上标等原文不进翻译请求，防止被翻译破坏
+   * 代码片段/上标等原文不进翻译请求，防止被翻译破坏；
+   * 组装完成后再对整体文本做专有名词保护（React 等术语同样占位）
    * @param {Node[]} nodes 段落文本节点流
    * @returns {{text: string, variables: Object}} 段落文本 + 变量表
    */
@@ -912,8 +995,9 @@
         pushPart(parts, txt);
       }
     }
+    const text = parts.join("").replace(/\s+/g, " ").trim();
     return {
-      text: parts.join("").replace(/\s+/g, " ").trim(),
+      text: protectProperNouns(text, variables),
       variables,
     };
   }
