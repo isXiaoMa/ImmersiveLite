@@ -205,21 +205,33 @@
         }
         break;
       case "SETTINGS_CHANGED": {
-        // 设置变化：刷新 UI 组件（悬浮球/划词开关）
-        initUIComponents();
         // 异步分流（保持 listener 同步，不破坏 sendResponse 通道）
         (async () => {
+          const data = await chrome.storage.sync.get("it_settings");
+          const cfg = data.it_settings || {};
+          // 悬浮球位置/开关等 UI 字段变化：仅刷新 UI 组件（不重翻）
+          initUIComponents();
+          // 翻译相关字段（from/to/service/display/style）变化才触发重翻流程
+          const sig = JSON.stringify([
+            cfg.from || "auto",
+            cfg.to || "zh-CN",
+            cfg.service || "free",
+            cfg.display === "single" ? "single" : "dual",
+            cfg.style || {},
+          ]);
+          if (sig === session.cfgSig) return;
           if (state.translated || state.translating) {
             // 原版 ple 状态机：仅显示模式变化时即时切换（复用已翻译 DOM，不重翻）
-            const data = await chrome.storage.sync.get("it_settings");
-            const newDisplay =
-              (data.it_settings || {}).display === "single" ? "single" : "dual";
+            const newDisplay = cfg.display === "single" ? "single" : "dual";
             const onlyDisplayChanged =
               newDisplay !== session.display &&
+              (cfg.from || "auto") === session.from &&
+              (cfg.to || "zh-CN") === session.to &&
               session.active &&
               session.allBlocks.some((b) => b.wrapper && b.wrapper.isConnected);
             if (onlyDisplayChanged) {
               applyDisplayMode(newDisplay);
+              session.cfgSig = sig;
             } else {
               restore().then(() => translatePage());
             }
@@ -387,6 +399,14 @@
       session.to = cfg.to || "zh-CN";
       session.display = cfg.display === "single" ? "single" : "dual";
       session.style = cfg.style || {};
+      // 翻译相关字段签名：SETTINGS_CHANGED 时对比，仅 UI 字段变化（如悬浮球位置）不重翻
+      session.cfgSig = JSON.stringify([
+        session.from,
+        session.to,
+        cfg.service || "free",
+        session.display,
+        session.style,
+      ]);
       applyStyleVars(cfg.style || {}, session.to);
 
       // 1. 站点规则全局样式修正（原版 Hh：解开 line-clamp 等截断，防译文被折叠）
@@ -1345,6 +1365,11 @@
     if (/^\d+(\.\d+)?\s*[kmb]$/i.test(text)) return true;
     // 社交媒体用户名（@xxx）
     if (/^@\w+/.test(text)) return true;
+    // 版本号（v19.2 / v2 / 3.1.4）及"数字+极少量字母"组合：
+    // 剔除数字与小数点后剩余字母 ≤1 个（v/x 等前缀），翻译无意义
+    if (/^\d+(\.\d+)*$/.test(text)) return true;
+    const lettersOnly = text.replace(/[\d\s.,:;/\-+()%$€£¥₹@#]/g, "");
+    if (/\d/.test(text) && lettersOnly.length <= 1) return true;
     return false;
   }
 
@@ -1605,6 +1630,16 @@
 
   /** 悬浮球元素引用 */
   let floatBall = null;
+  /** 悬浮球尺寸（px）：位置百分比按球心存储，恢复时需减去半径 */
+  const FLOAT_BALL_SIZE = 44;
+  /**
+   * 悬浮球位置存储（双写 + 时间戳取新，保证刷新/跨站点均不丢失）：
+   * - localStorage：同步写入，同站刷新立即可用（storage.sync 写失败时的兜底）
+   * - chrome.storage.sync 独立 key "it_ball_pos"：跨站点/跨设备同步；
+   *   独立于 it_settings，避免被 popup 保存/设置迁移的整体覆盖清掉
+   */
+  const BALL_LS_KEY = "it-ball-pos";
+  const BALL_SYNC_KEY = "it_ball_pos";
   /** 划词翻译是否启用 */
   let selectionEnabled = false;
   /** 划词译文卡片元素引用 */
@@ -1624,7 +1659,8 @@
     const data = await chrome.storage.sync.get("it_settings");
     const cfg = data.it_settings || {};
     if (cfg.showFloatBall !== false) {
-      mountFloatBall();
+      // 悬浮球位置：上次拖动位置（localStorage + sync 双源取新），无记录用右下角默认
+      mountFloatBall(await readBallPos());
     } else {
       unmountFloatBall();
     }
@@ -1632,42 +1668,105 @@
   }
 
   /**
-   * 挂载悬浮球（点击切换翻译，可垂直拖动，位置记忆到 localStorage）
+   * 读取悬浮球位置（三源取新：sync 独立 key > localStorage > 旧版 it_settings 内嵌字段）
+   * @returns {{x:number,y:number,t:number}|null} 位置记录（无则 null）
    */
-  function mountFloatBall() {
+  async function readBallPos() {
+    let synced = null;
+    try {
+      const d = await chrome.storage.sync.get(BALL_SYNC_KEY);
+      synced = d[BALL_SYNC_KEY] || null;
+    } catch {
+      // sync 读取失败走 localStorage
+    }
+    let local = null;
+    try {
+      local = JSON.parse(localStorage.getItem(BALL_LS_KEY));
+    } catch {
+      // 无记录或损坏
+    }
+    let legacy = null;
+    try {
+      const d = await chrome.storage.sync.get("it_settings");
+      const xy = (d.it_settings || {}).floatBallXY;
+      if (xy) legacy = { ...xy, t: 0 }; // 旧版无时间戳，视为最旧
+    } catch {
+      // ignore
+    }
+    const newest = [synced, local, legacy]
+      .filter((p) => p && isFinite(p.x) && isFinite(p.y))
+      .sort((a, b) => (b.t || 0) - (a.t || 0));
+    return newest[0] || null;
+  }
+
+  /**
+   * 挂载悬浮球：点击切换翻译，XY 自由拖动；
+   * 拖动后球心位置持久化（localStorage + storage.sync 双写），全站点生效
+   * @param {{x:number,y:number,t:number}|null} pos 上次拖动的位置记录
+   */
+  function mountFloatBall(pos) {
     if (floatBall) return;
     floatBall = document.createElement("div");
     floatBall.className = "it-float-ball";
     floatBall.dataset.itUi = "1";
     floatBall.title = "点击翻译 / 还原（可拖动）";
     floatBall.textContent = "译";
-    // 恢复上次拖动位置（仅垂直方向，水平固定在右侧）
-    const savedTop = localStorage.getItem("it-ball-top");
-    floatBall.style.top = savedTop || "45%";
+    // 恢复上次拖动位置：球心百分比 → 像素并钳制边界后定位。
+    // 关键：基准必须用 documentElement.clientWidth（不含滚动条），
+    // 与 position:fixed 的百分比基准（initial containing block）一致；
+    // 若用 window.innerWidth（含滚动条 ~17px）会导致恢复位置系统性左偏
+    if (pos) {
+      const { left, top } = ballCenterToPixel(
+        pos.x,
+        pos.y,
+        document.documentElement.clientWidth,
+        document.documentElement.clientHeight,
+      );
+      floatBall.style.left = left + "px";
+      floatBall.style.top = top + "px";
+    } else {
+      // 默认右下角（右侧/底部各留 16px 边距）
+      const off = FLOAT_BALL_SIZE + 16;
+      floatBall.style.left = `calc(100% - ${off}px)`;
+      floatBall.style.top = `calc(100% - ${off}px)`;
+    }
     document.body.appendChild(floatBall);
 
-    // 拖动 + 点击判定（位移小于 4px 视为点击）
+    // 拖动（XY 双向）+ 点击判定（位移小于 4px 视为点击）
     floatBall.addEventListener("mousedown", (e) => {
       e.preventDefault();
+      const startX = e.clientX;
       const startY = e.clientY;
-      const startTop = floatBall.getBoundingClientRect().top;
+      const rect = floatBall.getBoundingClientRect();
+      const startLeft = rect.left;
+      const startTop = rect.top;
       let moved = false;
       const onMove = (ev) => {
+        const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
-        if (Math.abs(dy) > 4) moved = true;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
         if (moved) {
+          // 拖动期间用像素定位（松手时再转百分比持久化）；
+          // 钳制基准同为 clientWidth/clientHeight（不含滚动条）
+          const vw = document.documentElement.clientWidth;
+          const vh = document.documentElement.clientHeight;
+          const left = Math.max(
+            8,
+            Math.min(vw - FLOAT_BALL_SIZE - 8, startLeft + dx),
+          );
           const top = Math.max(
             8,
-            Math.min(window.innerHeight - 56, startTop + dy),
+            Math.min(vh - FLOAT_BALL_SIZE - 8, startTop + dy),
           );
+          floatBall.style.left = left + "px";
           floatBall.style.top = top + "px";
         }
       };
-      const onUp = () => {
+      const onUp = async () => {
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
         if (moved) {
-          localStorage.setItem("it-ball-top", floatBall.style.top);
+          await saveFloatBallPosition();
         } else {
           toggleTranslation(); // 视为点击：切换翻译
         }
@@ -1676,6 +1775,56 @@
       document.addEventListener("mouseup", onUp);
     });
     updateFloatBall();
+  }
+
+  /**
+   * 球心百分比 → 左上角像素坐标（按当前视口尺寸换算并钳制边界）
+   * @param {number} xPct 球心 X 百分比（0~100）
+   * @param {number} yPct 球心 Y 百分比（0~100）
+   * @param {number} vw 视口宽（clientWidth，不含滚动条）
+   * @param {number} vh 视口高（clientHeight，不含滚动条）
+   * @returns {{left:number, top:number}} 左上角像素坐标
+   */
+  function ballCenterToPixel(xPct, yPct, vw, vh) {
+    const half = FLOAT_BALL_SIZE / 2;
+    const cx = (xPct / 100) * vw;
+    const cy = (yPct / 100) * vh;
+    return {
+      left: Math.round(Math.max(half + 8, Math.min(vw - half - 8, cx)) - half),
+      top: Math.round(Math.max(half + 8, Math.min(vh - half - 8, cy)) - half),
+    };
+  }
+
+  /**
+   * 持久化当前悬浮球位置（双写策略）：
+   * 1. localStorage 同步写（松手瞬间落盘，同站刷新立即可读；
+   *    亦规避"storage.sync 异步写未完成即刷新"的丢失窗口）
+   * 2. chrome.storage.sync 独立 key 异步写（跨站点/跨设备同步）
+   * 记录球心百分比（基准 clientWidth/clientHeight，与恢复侧一致），
+   * 不做百分比钳制（边界钳制在恢复时按当次视口执行）
+   */
+  async function saveFloatBallPosition() {
+    const rect = floatBall.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    if (!vw || !vh) return;
+    const pos = {
+      x: Math.round(((rect.left + rect.width / 2) / vw) * 1000) / 10,
+      y: Math.round(((rect.top + rect.height / 2) / vh) * 1000) / 10,
+      t: Date.now(),
+    };
+    if (!isFinite(pos.x) || !isFinite(pos.y)) return;
+    // 先落 localStorage（同步、必成功），刷新场景零丢失
+    try {
+      localStorage.setItem(BALL_LS_KEY, JSON.stringify(pos));
+    } catch {
+      // 隐私模式等场景 localStorage 不可用，仅依赖 sync
+    }
+    try {
+      await chrome.storage.sync.set({ [BALL_SYNC_KEY]: pos });
+    } catch (e) {
+      console.warn("[it] 悬浮球位置云端同步失败（本站已记忆）:", e);
+    }
   }
 
   /**

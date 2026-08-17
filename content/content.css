@@ -85,7 +85,7 @@
 /* ---------- 悬浮球 ---------- */
 .it-float-ball {
   position: fixed;
-  right: 16px;
+  /* left/top 由 JS 按"悬浮球位置"设置或上次拖动位置写入 */
   width: 44px;
   height: 44px;
   border-radius: 50%;

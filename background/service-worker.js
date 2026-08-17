@@ -18,6 +18,7 @@ const SETTINGS_KEY = "it_settings";
 /** 历史版本的默认提示词（读取设置时自动升级到最新版，用户自定义过的不受影响） */
 const LEGACY_PROMPTS = [
   "你是一位专业的翻译引擎。请将用户提供的 JSON 数组中的每段文本由{from}翻译为{to}，保持原文的语气与格式，不要添加任何解释。仅输出与输入等长的 JSON 字符串数组，不要输出其他内容。",
+  "你是一位专业翻译引擎。请将输入 JSON 数组中第 i 段文本由{from}翻译为{to}，作为输出数组的第 i 段，逐条对应、不得合并或遗漏。直接给出翻译结果，不要输出思考、分析或解释。输出仅为一个 JSON 字符串数组，与输入等长：元素必须为字符串，保留原文的换行与 markdown 格式，禁止输出代码块标记或其他任何文字。",
 ];
 
 /** 默认设置（首次安装时使用） */
@@ -29,65 +30,13 @@ const DEFAULT_SETTINGS = {
   showFloatBall: true, // 是否显示页面悬浮球
   selectionTranslate: true, // 是否开启划词翻译
   baidu: { appid: "", key: "" },
-  // 大模型服务配置列表（服务下拉按名称展示，服务标识为 llm:<id>）
+  // 大模型服务配置列表（默认为空，用户在设置页自行添加）
   // baseUrl 填根地址即可；Coze 使用原生 /v3/chat 协议，model 字段填 Bot ID
-  llmConfigs: [
-    {
-      id: "gpt",
-      name: "GPT-5.2",
-      baseUrl: "https://api.openai.com/v1",
-      apiKey: "",
-      model: "gpt-5.2",
-    },
-    {
-      id: "deepseek",
-      name: "DeepSeek",
-      baseUrl: "https://api.deepseek.com/v1",
-      apiKey: "",
-      model: "deepseek-chat",
-    },
-    {
-      id: "zhipu",
-      name: "智谱 GLM",
-      baseUrl: "https://open.bigmodel.cn/api/paas/v4",
-      apiKey: "",
-      model: "glm-4.7",
-    },
-    {
-      id: "doubao",
-      name: "豆包（火山方舟）",
-      baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
-      apiKey: "",
-      model: "doubao-seed-2-1-pro-260628",
-    },
-    {
-      id: "kimi",
-      name: "Kimi",
-      baseUrl: "https://api.moonshot.cn/v1",
-      apiKey: "",
-      model: "kimi-k2-turbo-preview",
-    },
-    {
-      id: "coze",
-      name: "Coze 扣子",
-      baseUrl: "https://api.coze.cn",
-      apiKey: "",
-      model: "",
-    },
-    {
-      id: "ollama",
-      name: "Ollama 本地",
-      baseUrl: "http://localhost:11434/v1",
-      apiKey: "ollama",
-      model: "qwen3:8b",
-    },
-  ],
-  // 用户主动删除的预置大模型 id（防止合并默认模板时复活）
-  deletedLlm: [],
+  llmConfigs: [],
   // 全局共用的大模型翻译提示词（各 llm 配置共享）
   openai: {
     prompt:
-      "你是一位专业翻译引擎。请将输入 JSON 数组中第 i 段文本由{from}翻译为{to}，作为输出数组的第 i 段，逐条对应、不得合并或遗漏。直接给出翻译结果，不要输出思考、分析或解释。输出仅为一个 JSON 字符串数组，与输入等长：元素必须为字符串，保留原文的换行与 markdown 格式，禁止输出代码块标记或其他任何文字。",
+      "你是一位专业翻译引擎。请将输入 JSON 数组中第 i 段文本由{from}完整翻译为{to}，作为输出数组的第 i 段，逐条对应、不得合并或遗漏。必须翻译每一段的全部内容：不得只翻译前半部分而原样保留后面的原文句子，遇到长文本也要逐句翻完。直接给出翻译结果，不要输出思考、分析或解释。输出仅为一个 JSON 字符串数组，与输入等长：元素必须为字符串，保留原文的换行与 markdown 格式，禁止输出代码块标记或其他任何文字。",
   },
   style: { color: "", followColor: true, bold: false, fontSize: "inherit" },
 };
@@ -100,20 +49,7 @@ async function getSettings() {
   const data = await chrome.storage.sync.get(SETTINGS_KEY);
   const saved = data[SETTINGS_KEY] || {};
   const settings = { ...DEFAULT_SETTINGS, ...saved };
-
-  // 合并默认大模型模板：新增的预置模型（如 Coze）自动出现在老用户的列表中，
-  // 用户已删除（deletedLlm）或已存在同名 id 的不重复补
-  if (Array.isArray(settings.llmConfigs)) {
-    const deleted = Array.isArray(settings.deletedLlm)
-      ? settings.deletedLlm
-      : [];
-    const ids = new Set(settings.llmConfigs.map((c) => c.id));
-    for (const tpl of DEFAULT_SETTINGS.llmConfigs) {
-      if (!ids.has(tpl.id) && !deleted.includes(tpl.id)) {
-        settings.llmConfigs.push({ ...tpl });
-      }
-    }
-  }
+  if (!Array.isArray(settings.llmConfigs)) settings.llmConfigs = [];
 
   // 迁移旧版 openai 单配置（baseUrl/apiKey/model）到 llmConfigs 首个配置项
   if (saved.openai && saved.openai.apiKey) {
@@ -337,7 +273,10 @@ async function translateTexts(texts, from, to, settings) {
   //    原版逐段做完整语言检测，这里用高置信启发式：目标为中文系时纯 CJK 文本跳过）
   const zhTarget = /^zh/.test(to);
   texts.forEach((t, i) => {
-    if (zhTarget && /^[\s\u3000\uff01-\uff5e\u4e00-\u9fff\u3001\u3002]+$/.test(t)) {
+    if (
+      zhTarget &&
+      /^[\s\u3000\uff01-\uff5e\u4e00-\u9fff\u3001\u3002]+$/.test(t)
+    ) {
       results[i] = t;
       return;
     }
@@ -349,45 +288,107 @@ async function translateTexts(texts, from, to, settings) {
   // 2. 未命中的部分发起真实请求
   if (missIdx.length) {
     const missTexts = missIdx.map((i) => texts[i]);
-    let translated;
     const service = settings.service;
-    if (service === "baidu") {
-      translated = await translateBaidu(missTexts, from, to, settings.baidu);
-    } else if (service.startsWith("llm:")) {
-      // 大模型服务：llm:<id> 路由到对应配置（prompt 全局共用）
-      const cfg = (settings.llmConfigs || []).find(
-        (c) => c.id === service.slice(4),
-      );
-      if (!cfg) throw new Error("大模型配置不存在，请到设置页检查");
-      if (!cfg.apiKey)
-        throw new Error(`${cfg.name} 尚未配置 API Key，请到设置页填写`);
-      const prompt =
-        (settings.openai && settings.openai.prompt) ||
-        DEFAULT_SETTINGS.openai.prompt;
-      if (cfg.id === "coze" || /coze\./.test(cfg.baseUrl || "")) {
-        // Coze 原生 /v3/chat 协议（model 字段为 Bot ID）
-        translated = await translateCoze(missTexts, from, to, {
-          ...cfg,
-          prompt,
+    /** 按当前服务分发一批文本（供首轮与修复轮复用） */
+    const dispatch = async (arr) => {
+      if (service === "baidu") {
+        return translateBaidu(arr, from, to, settings.baidu);
+      }
+      if (service.startsWith("llm:")) {
+        // 大模型服务：llm:<id> 路由到对应配置（prompt 全局共用）
+        const cfg = (settings.llmConfigs || []).find(
+          (c) => c.id === service.slice(4),
+        );
+        if (!cfg) throw new Error("大模型配置不存在，请到设置页检查");
+        if (!cfg.apiKey)
+          throw new Error(`${cfg.name} 尚未配置 API Key，请到设置页填写`);
+        const prompt =
+          (settings.openai && settings.openai.prompt) ||
+          DEFAULT_SETTINGS.openai.prompt;
+        if (cfg.id === "coze" || /coze\./.test(cfg.baseUrl || "")) {
+          // Coze 原生 /v3/chat 协议（model 字段为 Bot ID）
+          return translateCoze(arr, from, to, { ...cfg, prompt });
+        }
+        return translateOpenAI(arr, from, to, { ...cfg, prompt });
+      }
+      if (service === "free") return translateFree(arr, from, to);
+      // google 及其他默认走谷歌
+      return translateGoogle(arr, from, to);
+    };
+
+    let translated = await dispatch(missTexts);
+
+    // 3. 部分翻译检测与修复（大模型偶发"只翻前半段，后半原样返回"，
+    //    条数校验拦不住）：同服务重试一轮 → 仍异常用谷歌兜底
+    const badK = [];
+    translated.forEach((tr, k) => {
+      if (looksPartiallyTranslated(missTexts[k], tr, to)) badK.push(k);
+    });
+    if (badK.length) {
+      const retryTexts = badK.map((k) => missTexts[k]);
+      let repaired = null;
+      try {
+        repaired = await dispatch(retryTexts);
+      } catch {
+        // 重试失败保留原结果，继续尝试谷歌兜底
+      }
+      if (repaired) {
+        const stillBad = [];
+        repaired.forEach((tr, j) => {
+          if (looksPartiallyTranslated(retryTexts[j], tr, to)) stillBad.push(j);
         });
-      } else {
-        translated = await translateOpenAI(missTexts, from, to, {
-          ...cfg,
-          prompt,
+        if (stillBad.length && service !== "google") {
+          try {
+            const g = await translateGoogle(
+              stillBad.map((j) => retryTexts[j]),
+              from,
+              to,
+            );
+            stillBad.forEach((j, n) => {
+              repaired[j] = g[n];
+            });
+          } catch {
+            // 谷歌兜底失败保留重试结果
+          }
+        }
+        badK.forEach((k, j) => {
+          translated[k] = repaired[j];
         });
       }
-    } else if (service === "free") {
-      translated = await translateFree(missTexts, from, to);
-    } else {
-      // google 及其他默认走谷歌
-      translated = await translateGoogle(missTexts, from, to);
     }
+
     missIdx.forEach((idx, k) => {
       results[idx] = translated[k];
       cacheSet(cacheKey(settings.service, from, to, texts[idx]), translated[k]);
     });
   }
   return results;
+}
+
+/**
+ * 部分翻译检测：目标为中文且原文以拉丁字母为主时，
+ * 若译文中仍按原样保留过半的原文单词，判定为未翻全
+ * （如大模型只翻第一句、其余英文原样返回的场景）
+ * @param {string} src 原文
+ * @param {string} dst 译文
+ * @param {string} to 目标语言代码
+ * @returns {boolean} 是否疑似部分翻译
+ */
+function looksPartiallyTranslated(src, dst, to) {
+  if (!/^zh/.test(to)) return false;
+  if (!src || !dst || typeof dst !== "string") return false;
+  const letters = src.match(/[A-Za-z]/g) || [];
+  // 原文拉丁字母占比过半才检测（纯 CJK/混合文本不适用此启发式）
+  if (letters.length < src.replace(/\s/g, "").length * 0.5) return false;
+  const words = src.toLowerCase().match(/[a-z][a-z'-]+/g) || [];
+  if (words.length < 8) return false; // 词太少不足以下结论
+  const d = " " + dst.toLowerCase().replace(/[^a-z0-9'-]+/g, " ") + " ";
+  let hits = 0;
+  for (const w of words) {
+    if (d.includes(" " + w + " ")) hits++;
+  }
+  // 过半原文单词原样残留 → 部分翻译
+  return hits / words.length >= 0.5;
 }
 
 // ---------------------------------------------------------------------------
